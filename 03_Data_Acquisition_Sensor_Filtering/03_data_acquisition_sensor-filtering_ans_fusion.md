@@ -15,6 +15,7 @@ img[alt~="center"] {
 </style>
 
 ### Data Acquisition, Sensor Filtering and Fusion Techniques
+https://github.com/as-budi/Embedded_AI.git
 
 ---
 #### **Embedded System Architecture**
