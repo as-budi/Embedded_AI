@@ -199,9 +199,7 @@ plt.show()
 Pada tahap ini, Kalman Filter memprediksi keadaan sistem berdasarkan model sebelumnya.
 
 - **Prediksi keadaan (state estimate):**  
- $
-  \hat{x}_k^{-} = A \hat{x}_{k-1} + B u_k
- $
+ $\hat{x}_k^{-} = A \hat{x}_{k-1} + B u_k$
   - $\hat{x}_k^{-}$= prediksi keadaan pada waktu $k$ 
   - $A$= matriks transisi keadaan  
   - $\hat{x}_{k-1}$= keadaan sebelumnya  
@@ -209,9 +207,7 @@ Pada tahap ini, Kalman Filter memprediksi keadaan sistem berdasarkan model sebel
   - $u_k$= kontrol input (jika ada)  
 ---
 - **Prediksi kovarians error:**  
- $
-  P_k^{-} = A P_{k-1} A^T + Q
- $
+ $P_k^{-} = A P_{k-1} A^T + Q$
   - $P_k^{-}$= prediksi kovarians error  
   - $P_{k-1}$= kovarians error sebelumnya  
   - $Q$= kovarians noise proses  
@@ -222,23 +218,17 @@ Pada tahap ini, Kalman Filter memprediksi keadaan sistem berdasarkan model sebel
 Setelah prediksi, Kalman Filter memperbarui estimasi berdasarkan pengukuran baru.
 
 - **Menghitung Kalman Gain:**  
- $
-  K_k = P_k^{-} H^T (H P_k^{-} H^T + R)^{-1}
- $
+ $K_k = P_k^{-} H^T (H P_k^{-} H^T + R)^{-1}$
   - $K_k$= Kalman Gain  
   - $H$= matriks observasi  
   - $R$= kovarians noise pengukuran  
 ---
 - **Memperbarui estimasi keadaan:**  
- $
-  \hat{x}_k = \hat{x}_k^{-} + K_k (z_k - H \hat{x}_k^{-})
- $
+ $\hat{x}_k = \hat{x}_k^{-} + K_k (z_k - H \hat{x}_k^{-})$
   - $z_k$= pengukuran baru  
 
 - **Memperbarui kovarians error:**  
- $
-  P_k = (I - K_k H) P_k^{-}
- $
+ $P_k = (I - K_k H) P_k^{-}$
   - $I$= matriks identitas  
 
 ---
