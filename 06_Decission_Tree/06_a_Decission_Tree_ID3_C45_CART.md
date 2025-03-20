@@ -14,7 +14,7 @@ img[alt~="center"] {
 }
 </style>
 
-### Decission Tree
+### Decission Tree (ID3, C4.5, CART)
 https://github.com/as-budi/Embedded_AI.git
 
 ---
