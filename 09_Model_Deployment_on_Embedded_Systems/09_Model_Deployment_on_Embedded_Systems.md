@@ -39,90 +39,107 @@ https://github.com/as-budi/Embedded_AI.git
 #### ✨ A. Training Model
 - Model dilatih di PC/laptop menggunakan Keras atau Tensorflow.
 - Biasanya modelnya sederhana: **MLP (Multilayer Perceptron)**, **Decision Tree**, **SVM**, **Random Forest**, atau bahkan **small CNN**.
----
-- Contoh model kecil:
-  ```python
-  import tensorflow as tf
-  from tensorflow.keras.models import Sequential
-  from tensorflow.keras.layers import Dense
+- Contoh training model untuk dataset iris:
+https://github.com/as-budi/Embedded_AI/blob/main/09_Model_Deployment_on_Embedded_Systems/09_codes/train-tensorflow-model-for-arduino.ipynb
 
-  model = Sequential([
-      Dense(8, activation='relu', input_shape=(3,)), 
-      Dense(4, activation='relu'),
-      Dense(1, activation='sigmoid')
-  ])
-
-  model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-  # Lanjutkan training...
-  ```
 ---
 
 #### ✨ B. Pruning & Kuantisasi (Opsional tapi Penting)
-- Quantisasi membuat model lebih kecil, lebih cepat, dan kompatibel dengan memori terbatas.
-- Tambahkan opsi quantization saat konversi:
-  ```python
-  converter.optimizations = [tf.lite.Optimize.DEFAULT]
-  tflite_quant_model = converter.convert()
-  ```
-- Biasanya akan mengubah float32 → int8.
-- **Lihat Materi sebelumnya tentang Pruning dan Kuantisasi**
+- Pruning & Kuantisasi membuat model lebih kecil, lebih cepat, dan kompatibel dengan memori terbatas.
+- **Lihat Materi sebelumnya tentang Pruning dan Kuantisasi!**
 
 ---
 
-#### ✨ C. Konversi ke TensorFlow Lite
-- Setelah model selesai, dikonversi ke **TFLite**.
+#### ✨ C. Ekspor Model
+- Model hasil training perlu diubah menjadi array C-byte agar bisa di-include ke dalam program Arduino.
+- Untuk mengekspor model ini dibutuhkan library `everywhereml`.
+   ```bash
+   pip install "everywhereml>=0.2.32"
+   ```
+- contoh baris code yang digunakan untuk mengekspor model:
   ```python
-  converter = tf.lite.TFLiteConverter.from_keras_model(model)
-  tflite_model = converter.convert()
-
-  with open('model.tflite', 'wb') as f:
-      f.write(tflite_model)
+   from everywhereml.code_generators.tensorflow import convert_model
+   c_header = convert_model(model, X, y, model_name='irisModel')
+   print(c_header)
   ```
-
-
 ---
-
-#### ✨ D. Ubah menjadi C-array
-- Model `.tflite` perlu diubah menjadi array C-byte agar bisa di-include ke dalam program Arduino.
-- Menggunakan `xxd`:
-  ```bash
-  xxd -i model.tflite > model.h
-  ```
-- Hasilnya berupa file `model.h` yang berisi:
+- Hasilnya dapat disalin dan disimpan dalam file `model.h`:
   ```c
-  unsigned char model_tflite[] = {0x1c, 0x00, 0x00, ...};
-  unsigned int model_tflite_len = 1234;
+   #pragma once
+   ...
+   const unsigned char irisModel[] DATA_ALIGN_ATTRIBUTE = { 0x1c, 0x00, 0x00, 0x00, 
+   ...
+   0x54, 0x46, 0x4c, 0x33, 0x14, 0x00, 0x00, 0x09 };
   ```
-
+- Bagian yang disalin adalah mulai dari `#pragma once` sampai dengan akhir dari isi variabel `const unsigned char irisModel[] DATA_ALIGN_ATTRIBUTE`.
 ---
 
-#### ✨ E. Deployment di ESP32 dengan EloquentTinyML
+#### ✨ D. Deployment dan inferensi di ESP32
+- Untuk melakukan deployment dan inferensi di ESP32 melalui Arduino IDE, perlu diinstal library:
+   - EloquentTinyML (https://github.com/eloquentarduino/EloquentTinyML)
+   - tflm_esp32 (https://github.com/eloquentarduino/tflm_esp32)
 - Di Arduino IDE, include `EloquentTinyML.h`.
-- Contoh basic code:
+
+---
+#### Contoh basic code:
   ```cpp
-  #include "model.h"  // file model.h hasil xxd
-  #include <EloquentTinyML.h>
+   #include "irisModel.h"
+   #include <tflm_esp32.h>
+   #include <eloquent_tinyml.h>
+   #define ARENA_SIZE 2000
 
-  // Sesuaikan ukuran input dan output
-  #define INPUTS 3
-  #define OUTPUTS 1
-  #define TENSOR_ARENA_SIZE 2*1024  // Size RAM Arena (tweak sesuai model)
+   Eloquent::TF::Sequential<TF_NUM_OPS, ARENA_SIZE> tf;
 
-  Eloquent::TinyML::TinyML<INPUTS, OUTPUTS, TENSOR_ARENA_SIZE> ml;
+   void setup() {
+      Serial.begin(115200);
+      delay(3000);
+      Serial.println("__TENSORFLOW IRIS__");
+      tf.setNumInputs(4);
+      tf.setNumOutputs(3);
 
-  void setup() {
-    Serial.begin(115200);
-    ml.begin(model_tflite);
-  }
+      tf.resolver.AddFullyConnected();
+      tf.resolver.AddSoftmax();
 
-  void loop() {
-    float input[INPUTS] = {1.2, 3.4, 5.6};  // Data input sensor, misalnya
-    float prediction = ml.predict(input);
+      while (!tf.begin(irisModel).isOk()) 
+         Serial.println(tf.exception.toString());
+   }
 
-    Serial.print("Prediksi: ");
-    Serial.println(prediction);
+
+void loop() {
+    // classify class 0
+    if (!tf.predict(x0).isOk()) {
+        Serial.println(tf.exception.toString());
+        return;
+    }
+    
+    Serial.print("expcted class 0, predicted class ");
+    Serial.println(tf.classification);
+    
+    // classify class 1
+    if (!tf.predict(x1).isOk()) {
+        Serial.println(tf.exception.toString());
+        return;
+    }
+    
+    Serial.print("expcted class 1, predicted class ");
+    Serial.println(tf.classification);
+    
+    // classify class 2
+    if (!tf.predict(x2).isOk()) {
+        Serial.println(tf.exception.toString());
+        return;
+    }
+    
+    Serial.print("expcted class 2, predicted class ");
+    Serial.println(tf.classification);
+
+    // how long does it take to run a single prediction?
+    Serial.print("It takes ");
+    Serial.print(tf.benchmark.microseconds());
+    Serial.println("us for a single prediction");
+    
     delay(1000);
-  }
+}
   ```
 
 ---
