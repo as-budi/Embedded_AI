@@ -141,5 +141,6 @@ void loop() {
     delay(1000);
 }
   ```
-
 ---
+- Arduino project dapat diakses di:
+https://github.com/as-budi/Embedded_AI/tree/main/09_Model_Deployment_on_Embedded_Systems/09_codes/IrisExample
