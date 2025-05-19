@@ -471,9 +471,7 @@ vTaskDelay(100 / 10);  // Delay 10 tick = 100 ms
 | Aman digunakan                          | Cocok untuk loop di dalam task                             |
 | Tidak cocok untuk timing presisi tinggi | Gunakan timer/interrupt untuk kebutuhan presisi mikrodetik |
 
----
-
-Jika Anda ingin kontrol waktu delay lebih tepat (misal: delay absolut atau periodik), kita bisa gunakan `vTaskDelayUntil()`. Mau saya jelaskan juga perbedaannya?
+- Jika kita ingin kontrol waktu delay lebih tepat (misal: delay absolut atau periodik), kita bisa gunakan `vTaskDelayUntil()`.
 
 ---
 
