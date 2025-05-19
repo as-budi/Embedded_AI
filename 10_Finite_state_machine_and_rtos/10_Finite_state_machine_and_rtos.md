@@ -333,6 +333,75 @@ RTOS dapat mengatur sistem ke *sleep mode*, lalu bangun hanya saat:
 Contoh: Kamera dengan ESP32-CAM + AI hanya aktif saat gerakan terdeteksi.
 
 ---
+#### **Fungsi `xTaskCreatePinnedToCore()`** 
+- Fungsi ini adalah bagian dari **FreeRTOS** pada ESP32 yang digunakan untuk membuat dan menjalankan **task (thread)**, serta menetapkan task tersebut berjalan di core yang mana (ESP32 memiliki 2 core: core 0 dan core 1).
+
+---
+
+#### 🧩 Sintaks Umum
+
+```cpp
+BaseType_t xTaskCreatePinnedToCore(
+    TaskFunction_t pvTaskCode,
+    const char * const pcName,
+    const uint32_t usStackDepth,
+    void *pvParameters,
+    UBaseType_t uxPriority,
+    TaskHandle_t *pvCreatedTask,
+    const BaseType_t xCoreID
+);
+```
+
+---
+
+#### 🧠 Penjelasan Argumen
+```
+xTaskCreatePinnedToCore(TaskSensorFSM, "SensorTask", 2048, NULL, 1, NULL, 1);`
+```
+| No | Argumen         | Nilai           | Fungsi                                                                                                                                                          |
+| -- | --------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | `pvTaskCode`    | `TaskSensorFSM` | Fungsi yang akan dijalankan sebagai task (harus `void function(void* param)` dan infinite loop `while(1)`)                                                      |
+| 2  | `pcName`        | `"SensorTask"`  | Nama task untuk debugging/logging                                                                                                                               |
+---
+| No | Argumen         | Nilai           | Fungsi                                                                                                                                                          |
+| -- | --------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3  | `usStackDepth`  | `2048`          | Ukuran stack task dalam *word* (1 word = 4 byte pada ESP32), berarti 2048 × 4 = **8192 byte stack memory**                                                      |
+| 4  | `pvParameters`  | `NULL`          | Parameter yang akan dikirim ke fungsi task. Bisa `NULL` jika tidak digunakan                                                                                    |
+| 5  | `uxPriority`    | `1`             | Prioritas task (lebih besar = lebih prioritas)                                                                                                                  |
+---
+| No | Argumen         | Nilai           | Fungsi                                                                                                                                                          |
+| -- | --------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6  | `pvCreatedTask` | `NULL`          | Alamat variabel untuk menyimpan handle task jika ingin mengontrol (suspend/resume/delete). Jika tidak perlu, isi `NULL`                                         |
+| 7  | `xCoreID`       | `1`             | Nomor core tempat task ini dijalankan:<br> `0` = core 0 (proses utama)<br> `1` = core 1 (biasanya untuk komunikasi/AI)<br> `tskNO_AFFINITY` = bisa di mana saja |
+
+---
+
+#### ⚠️ Catatan Tambahan
+
+* **ESP32 memiliki dua core:**
+
+  * **Core 0**: untuk tugas utama dan Wi-Fi
+  * **Core 1**: untuk tugas tambahan (rekomendasi untuk sensor, AI, dsb.)
+* **Ukuran stack (`2048`)** harus cukup besar terutama untuk tugas berat seperti AI.
+* **Prioritas (`1`)** lebih tinggi akan mendahului task lain dengan prioritas lebih rendah.
+
+---
+
+#### 🧪 Contoh Kasus
+
+Jika Anda ingin:
+
+* `TaskSensorFSM`: berjalan di core 1 untuk membaca sensor secara berkala
+* `TaskInferenceFSM`: inferensi AI, diletakkan di core 0
+
+Maka:
+
+```cpp
+xTaskCreatePinnedToCore(TaskSensorFSM, "Sensor", 2048, NULL, 1, NULL, 1);  // Core 1
+xTaskCreatePinnedToCore(TaskInferenceFSM, "AI", 4096, NULL, 2, NULL, 0);   // Core 0
+```
+
+---
 
 #### 🧪 3. **Contoh FreeRTOS pada ESP32 + AI**
 
@@ -349,7 +418,7 @@ void TaskAIInference(void *pvParameters) {
     if (dataAvailable) {
       runInference();
     }
-    vTaskDelay(50 / portTICK_PERIOD_MS);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
   }
 }
 
