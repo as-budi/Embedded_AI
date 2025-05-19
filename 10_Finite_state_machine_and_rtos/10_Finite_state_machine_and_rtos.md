@@ -333,6 +333,32 @@ RTOS dapat mengatur sistem ke *sleep mode*, lalu bangun hanya saat:
 Contoh: Kamera dengan ESP32-CAM + AI hanya aktif saat gerakan terdeteksi.
 
 ---
+
+#### 🧪 3. **Contoh FreeRTOS pada ESP32 + AI**
+
+```cpp
+void TaskSensorRead(void *pvParameters) {
+  for (;;) {
+    readSensor();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
+}
+
+void TaskAIInference(void *pvParameters) {
+  for (;;) {
+    if (dataAvailable) {
+      runInference();
+    }
+    vTaskDelay(200 / portTICK_PERIOD_MS);
+  }
+}
+
+void setup() {
+  xTaskCreatePinnedToCore(TaskSensorRead, "Sensor", 2048, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(TaskAIInference, "Inference", 4096, NULL, 2, NULL, 1);
+}
+```
+---
 #### **Fungsi `xTaskCreatePinnedToCore()`** 
 - Fungsi ini adalah bagian dari **FreeRTOS** pada ESP32 yang digunakan untuk membuat dan menjalankan **task (thread)**, serta menetapkan task tersebut berjalan di core yang mana (ESP32 memiliki 2 core: core 0 dan core 1).
 
@@ -403,32 +429,51 @@ xTaskCreatePinnedToCore(TaskInferenceFSM, "AI", 4096, NULL, 2, NULL, 0);   // Co
 
 ---
 
-#### 🧪 3. **Contoh FreeRTOS pada ESP32 + AI**
+#### 🧱 `vTaskDelay(tickDelay)`
+
+- Fungsi ini **menunda eksekusi task saat ini**, dan membiarkan FreeRTOS menjalankan task lain. Task akan “tidur” selama jumlah **tick** tertentu, lalu aktif kembali.
+
+#### 🧮 `100 / portTICK_PERIOD_MS`
+
+- FreeRTOS menghitung waktu dalam satuan **tick**, bukan milidetik. Maka dari itu, `portTICK_PERIOD_MS` digunakan untuk mengonversi **milidetik → tick**.
+---
+| Komponen                  | Fungsi                                                                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `100`                      | Waktu delay dalam **milidetik**                                                                                                   |
+| `portTICK_PERIOD_MS`      | Konstanta yang menyatakan **berapa milidetik dalam satu tick**<br>Default-nya adalah `1 ms/tick` jika `configTICK_RATE_HZ = 1000` |
+| `100 / portTICK_PERIOD_MS` | Jumlah tick untuk delay 100 ms                                                                                                     |
+
+---
+
+#### 🧠 Contoh Perhitungan
+
+- `configTICK_RATE_HZ = 1000` (default untuk ESP32)
+- Maka `portTICK_PERIOD_MS = 1`
 
 ```cpp
-void TaskSensorRead(void *pvParameters) {
-  for (;;) {
-    readSensor();
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
-}
-
-void TaskAIInference(void *pvParameters) {
-  for (;;) {
-    if (dataAvailable) {
-      runInference();
-    }
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-  }
-}
-
-void setup() {
-  xTaskCreatePinnedToCore(TaskSensorRead, "Sensor", 2048, NULL, 1, NULL, 1);
-  xTaskCreatePinnedToCore(TaskAIInference, "Inference", 4096, NULL, 2, NULL, 1);
-}
+vTaskDelay(100 / 1);  // Delay 100 tick = 100 ms
 ```
 
-ESP32 memiliki dua core, sehingga Anda bisa menjalankan inferensi AI di satu core dan I/O di core lain, **tanpa blocking**.
+- Jika kita ubah `configTICK_RATE_HZ = 100`, maka `portTICK_PERIOD_MS = 10`, dan:
+
+```cpp
+vTaskDelay(100 / 10);  // Delay 10 tick = 100 ms
+```
+
+---
+
+#### ⚙️ Karakteristik `vTaskDelay()`
+
+| Sifat                                   | Penjelasan                                                 |
+| --------------------------------------- | ---------------------------------------------------------- |
+| Non-blocking                            | Task lain masih bisa jalan selama delay                    |
+| Relative delay                          | Delay dihitung sejak fungsi dipanggil                      |
+| Aman digunakan                          | Cocok untuk loop di dalam task                             |
+| Tidak cocok untuk timing presisi tinggi | Gunakan timer/interrupt untuk kebutuhan presisi mikrodetik |
+
+---
+
+Jika Anda ingin kontrol waktu delay lebih tepat (misal: delay absolut atau periodik), kita bisa gunakan `vTaskDelayUntil()`. Mau saya jelaskan juga perbedaannya?
 
 ---
 
